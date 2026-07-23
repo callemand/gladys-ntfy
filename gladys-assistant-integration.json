@@ -1,0 +1,111 @@
+{
+  "manifest_version": 1,
+  "type": "communication",
+  "name": "ntfy",
+  "description": {
+    "en": "Send push notifications through ntfy (ntfy.sh or self-hosted).",
+    "fr": "Envoyez des notifications push via ntfy (ntfy.sh ou auto-hébergé)."
+  },
+  "version": "1.0.0",
+  "docker_image": "ghcr.io/callemand/gladys-ntfy:1.0.0",
+  "gladys_version": ">=4.62.0",
+  "cover_image": "https://raw.githubusercontent.com/callemand/gladys-ntfy/main/cover.png",
+  "messaging": {
+    "receive": false
+  },
+  "config_schema": [
+    {
+      "key": "server_url",
+      "type": "string",
+      "label": {
+        "en": "ntfy server URL",
+        "fr": "URL du serveur ntfy"
+      },
+      "description": {
+        "en": "The base URL of the ntfy server, shared by everyone. Use the public https://ntfy.sh or your own self-hosted server.",
+        "fr": "L'URL de base du serveur ntfy, commune à tous. Utilisez le service public https://ntfy.sh ou votre propre serveur auto-hébergé."
+      },
+      "placeholder": {
+        "en": "https://ntfy.sh",
+        "fr": "https://ntfy.sh"
+      },
+      "default": "https://ntfy.sh",
+      "required": true
+    },
+    {
+      "key": "default_priority",
+      "type": "select",
+      "label": {
+        "en": "Default priority",
+        "fr": "Priorité par défaut"
+      },
+      "description": {
+        "en": "Priority applied to the notifications sent by Gladys.",
+        "fr": "Priorité appliquée aux notifications envoyées par Gladys."
+      },
+      "default": "3",
+      "options": [
+        { "value": "1", "label": { "en": "Min", "fr": "Min" } },
+        { "value": "2", "label": { "en": "Low", "fr": "Basse" } },
+        { "value": "3", "label": { "en": "Default", "fr": "Normale" } },
+        { "value": "4", "label": { "en": "High", "fr": "Haute" } },
+        { "value": "5", "label": { "en": "Max / Urgent", "fr": "Max / Urgente" } }
+      ],
+      "required": false
+    },
+    {
+      "key": "default_title",
+      "type": "string",
+      "label": {
+        "en": "Default notification title",
+        "fr": "Titre par défaut des notifications"
+      },
+      "description": {
+        "en": "Title shown on the notifications sent by Gladys.",
+        "fr": "Titre affiché sur les notifications envoyées par Gladys."
+      },
+      "placeholder": {
+        "en": "Gladys",
+        "fr": "Gladys"
+      },
+      "default": "Gladys",
+      "required": false
+    }
+  ],
+  "contact_schema": [
+    {
+      "key": "topic",
+      "type": "string",
+      "label": {
+        "en": "Your ntfy topic",
+        "fr": "Votre topic ntfy"
+      },
+      "description": {
+        "en": "The ntfy topic your notifications are sent to. Subscribe to it in the ntfy app to receive them. Choose a long, hard-to-guess name.",
+        "fr": "Le topic ntfy sur lequel vos notifications sont envoyées. Abonnez-vous-y dans l'application ntfy pour les recevoir. Choisissez un nom long et difficile à deviner."
+      },
+      "placeholder": {
+        "en": "gladys-home-a8f3k2",
+        "fr": "gladys-maison-a8f3k2"
+      },
+      "required": true
+    },
+    {
+      "key": "access_token",
+      "type": "secret",
+      "label": {
+        "en": "Access token",
+        "fr": "Jeton d'accès"
+      },
+      "description": {
+        "en": "ntfy access token (starts with tk_) allowed to publish to your protected topic.",
+        "fr": "Jeton d'accès ntfy (commence par tk_) autorisé à publier sur votre topic protégé."
+      },
+      "placeholder": {
+        "en": "tk_xxxxxxxxxxxxxxxx",
+        "fr": "tk_xxxxxxxxxxxxxxxx"
+      },
+      "required": true
+    }
+  ]
+}

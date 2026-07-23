@@ -1,0 +1,10 @@
+node_modules/
+npm-debug.log*
+.env
+.env.*
+data/
+*.log
+.DS_Store
+gladys-*.db
+gladys-*.duckdb
+gladys-*.duckdb.wal
