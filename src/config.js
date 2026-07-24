@@ -8,9 +8,17 @@
 //     the integration inside the `contact` of every onSendMessage call.
 // -----------------------------------------------------------------------------
 
-import { DEFAULT_SERVER_URL, DEFAULT_TITLE, DEFAULT_PRIORITY, NTFY_PRIORITY } from './constants.js';
+import {
+  DEFAULT_SERVER_URL,
+  DEFAULT_TITLE,
+  DEFAULT_PRIORITY,
+  NTFY_PRIORITY,
+  SERVER_MODE,
+  LOCAL_SERVER_URL,
+} from './constants.js';
 
 export const DEFAULT_CONFIG = {
+  mode: SERVER_MODE.CLOUD,
   serverUrl: DEFAULT_SERVER_URL,
   defaultPriority: DEFAULT_PRIORITY,
   defaultTitle: DEFAULT_TITLE,
@@ -36,10 +44,30 @@ function normalizePriority(raw) {
 export function normalizeConfig(raw = {}) {
   const serverUrl = (raw.server_url || DEFAULT_SERVER_URL).trim().replace(/\/+$/, '');
   return {
+    mode: raw.mode === SERVER_MODE.LOCAL ? SERVER_MODE.LOCAL : SERVER_MODE.CLOUD,
     serverUrl: serverUrl || DEFAULT_SERVER_URL,
     defaultPriority: normalizePriority(raw.default_priority),
     defaultTitle: raw.default_title != null ? String(raw.default_title) : DEFAULT_TITLE,
   };
+}
+
+/**
+ * Whether the local ntfy server (companion container) is selected.
+ * @param {ReturnType<typeof normalizeConfig>} config
+ */
+export function isLocalMode(config) {
+  return config.mode === SERVER_MODE.LOCAL;
+}
+
+/**
+ * Resolve the base URL the integration publishes to:
+ *   - local mode -> the companion container, reached on the private network;
+ *   - cloud mode -> the configured (or default) server URL.
+ * @param {ReturnType<typeof normalizeConfig>} config
+ * @returns {string}
+ */
+export function resolveServerBaseUrl(config) {
+  return isLocalMode(config) ? LOCAL_SERVER_URL.replace(/\/+$/, '') : config.serverUrl;
 }
 
 /**

@@ -32,8 +32,13 @@ La configuration se fait en deux parties :
 
 ### 1. Réglages de l'intégration (communs, une seule fois)
 
-- **URL du serveur ntfy** — `https://ntfy.sh` par défaut, ou votre serveur
-  auto-hébergé ;
+- **Mode serveur** — où les notifications sont publiées :
+  - **Cloud** — le service public `https://ntfy.sh` ou un autre serveur distant
+    renseigné dans l'URL ci-dessous ;
+  - **Serveur local géré par Gladys** — Gladys fait tourner son propre serveur
+    ntfy (voir la section dédiée plus bas) ;
+- **URL du serveur ntfy (mode cloud)** — le serveur utilisé en mode cloud
+  (ignoré en mode local) ;
 - **Priorité par défaut** — la priorité des notifications envoyées par Gladys ;
 - **Titre par défaut** — le titre affiché sur ces notifications.
 
@@ -48,6 +53,26 @@ compte » :
 
 Puis **abonnez-vous à ce topic dans l'application ntfy** sur votre téléphone
 pour recevoir les notifications.
+
+## Serveur local géré par Gladys
+
+Réglez **Mode serveur** sur **Local** : Gladys démarre et gère son propre
+serveur ntfy dans un conteneur — aucun service externe, vos notifications ne
+quittent jamais votre réseau.
+
+- **Docker est requis** (le serveur tourne comme conteneur compagnon).
+- Gladys publie automatiquement sur ce serveur local ; vous n'avez qu'à choisir
+  votre **topic** dans votre compte (le jeton d'accès est optionnel pour un
+  serveur local).
+- **Votre téléphone doit pouvoir joindre le serveur.** Le serveur local est
+  exposé sur votre réseau local sur un port choisi par Gladys (affiché via un
+  lien « Ouvrir » sur la page de l'intégration). Dans l'application ntfy,
+  ajoutez un serveur avec cette adresse (`http://<ip-gladys>:<port>`) et
+  abonnez-vous à votre topic dessus.
+- Comme il est sur votre réseau local, le push en arrière-plan fonctionne quand
+  le téléphone est sur le réseau de la maison. Pour une réception fiable depuis
+  n'importe où, exposez le serveur derrière un reverse-proxy HTTPS public
+  (avancé).
 
 ## Envoyer des notifications
 

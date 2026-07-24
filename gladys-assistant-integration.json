@@ -6,31 +6,82 @@
     "en": "Send push notifications through ntfy (ntfy.sh or self-hosted).",
     "fr": "Envoyez des notifications push via ntfy (ntfy.sh ou auto-hébergé)."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/callemand/gladys-ntfy:1.0.0",
+  "version": "1.1.0",
+  "docker_image": "ghcr.io/callemand/gladys-ntfy:1.1.0",
   "gladys_version": ">=4.62.0",
   "cover_image": "https://raw.githubusercontent.com/callemand/gladys-ntfy/main/cover.png",
   "messaging": {
     "receive": false
   },
+  "containers": [
+    {
+      "name": "server",
+      "docker_image": "binwiederhier/ntfy:v2.26.3",
+      "command": ["serve"],
+      "start": "manual",
+      "read_only": false,
+      "memory_mb": 256,
+      "env": {
+        "NTFY_CACHE_FILE": "/var/cache/ntfy/cache.db",
+        "NTFY_CACHE_DURATION": "12h"
+      },
+      "volumes": ["/var/cache/ntfy"],
+      "ports": [
+        {
+          "container_port": 80,
+          "label": {
+            "en": "ntfy web / API",
+            "fr": "Web / API ntfy"
+          }
+        }
+      ]
+    }
+  ],
   "config_schema": [
+    {
+      "key": "mode",
+      "type": "select",
+      "label": {
+        "en": "Server mode",
+        "fr": "Mode serveur"
+      },
+      "description": {
+        "en": "Where notifications are published. Cloud: the public ntfy.sh or a URL you set. Local: a ntfy server managed by Gladys (Docker required); subscribe your phone to it on your LAN.",
+        "fr": "Où les notifications sont publiées. Cloud : le service public ntfy.sh ou une URL de votre choix. Local : un serveur ntfy géré par Gladys (Docker requis) ; abonnez votre téléphone dessus sur votre réseau local."
+      },
+      "default": "cloud",
+      "options": [
+        {
+          "value": "cloud",
+          "label": {
+            "en": "Cloud (ntfy.sh or custom URL)",
+            "fr": "Cloud (ntfy.sh ou URL personnalisée)"
+          }
+        },
+        {
+          "value": "local",
+          "label": { "en": "Local server managed by Gladys", "fr": "Serveur local géré par Gladys" }
+        }
+      ],
+      "required": false
+    },
     {
       "key": "server_url",
       "type": "string",
       "label": {
-        "en": "ntfy server URL",
-        "fr": "URL du serveur ntfy"
+        "en": "ntfy server URL (cloud mode)",
+        "fr": "URL du serveur ntfy (mode cloud)"
       },
       "description": {
-        "en": "The base URL of the ntfy server, shared by everyone. Use the public https://ntfy.sh or your own self-hosted server.",
-        "fr": "L'URL de base du serveur ntfy, commune à tous. Utilisez le service public https://ntfy.sh ou votre propre serveur auto-hébergé."
+        "en": "Cloud mode only: the base URL of the ntfy server. Use the public https://ntfy.sh or your own remote server. Ignored in local mode.",
+        "fr": "Mode cloud uniquement : l'URL de base du serveur ntfy. Utilisez le service public https://ntfy.sh ou votre propre serveur distant. Ignoré en mode local."
       },
       "placeholder": {
         "en": "https://ntfy.sh",
         "fr": "https://ntfy.sh"
       },
       "default": "https://ntfy.sh",
-      "required": true
+      "required": false
     },
     {
       "key": "default_priority",
@@ -98,14 +149,14 @@
         "fr": "Jeton d'accès"
       },
       "description": {
-        "en": "ntfy access token (starts with tk_) allowed to publish to your protected topic.",
-        "fr": "Jeton d'accès ntfy (commence par tk_) autorisé à publier sur votre topic protégé."
+        "en": "ntfy access token (starts with tk_) allowed to publish to your topic. Required for a protected topic (e.g. on ntfy.sh); optional for an open local server.",
+        "fr": "Jeton d'accès ntfy (commence par tk_) autorisé à publier sur votre topic. Requis pour un topic protégé (ex. sur ntfy.sh) ; optionnel pour un serveur local ouvert."
       },
       "placeholder": {
         "en": "tk_xxxxxxxxxxxxxxxx",
         "fr": "tk_xxxxxxxxxxxxxxxx"
       },
-      "required": true
+      "required": false
     }
   ]
 }

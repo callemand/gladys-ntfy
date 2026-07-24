@@ -30,8 +30,13 @@ The configuration has two parts:
 
 ### 1. Integration settings (shared, set once)
 
-- **ntfy server URL** — `https://ntfy.sh` by default, or your self-hosted
-  server;
+- **Server mode** — where notifications are published:
+  - **Cloud** — the public `https://ntfy.sh` or another remote server you set
+    in the URL below;
+  - **Local server managed by Gladys** — Gladys runs its own ntfy server for
+    you (see the dedicated section below);
+- **ntfy server URL (cloud mode)** — the server used in cloud mode (ignored in
+  local mode);
 - **Default priority** — the priority of the notifications Gladys sends;
 - **Default notification title** — the title shown on those notifications.
 
@@ -45,6 +50,23 @@ Each Gladys user opens the integration and fills their own account block:
 
 Then **subscribe to that topic in the ntfy app** on your phone so the
 notifications reach you.
+
+## Local server managed by Gladys
+
+Set **Server mode** to **Local**: Gladys starts and manages its own ntfy server
+in a container — no external service, your notifications never leave your
+network.
+
+- **Docker is required** (the server runs as a companion container).
+- Gladys publishes to this local server automatically; you only pick your
+  **topic** in your account (the access token is optional for a local server).
+- **Your phone must be able to reach the server.** The local server is exposed
+  on your LAN on a port chosen by Gladys (shown as an "Open" link on the
+  integration page). In the ntfy app, add a server with that address
+  (`http://<gladys-ip>:<port>`) and subscribe to your topic there.
+- Because it is on your LAN, background push works when your phone is on your
+  home network. For reliable delivery from anywhere, expose the server behind a
+  public HTTPS reverse proxy (advanced).
 
 ## Sending notifications
 

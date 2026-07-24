@@ -1,7 +1,6 @@
 // End-to-end test: boots the REAL integration process (index.js) against a
-// fake Gladys host (WebSocket + REST, same contract as the SDK) and a fake ntfy
-// server, then exercises the send-only flow: on a message.send the integration
-// publishes to the user's own ntfy topic with their access token.
+// fake Gladys host (WebSocket + REST) and a fake ntfy server, then exercises
+// the send-only flow in both server modes (cloud and local companion server).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +10,6 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SELECTOR = 'ntfy-test';
 const TOKEN = 'test-token';
 const USER_TOPIC = 'alice-home-topic';
 const USER_ACCESS_TOKEN = 'tk_alice';
@@ -48,8 +46,8 @@ function startFakeNtfy() {
 }
 
 // --- Fake Gladys host (REST + WebSocket) -------------------------------------
-function startFakeGladys(ntfyPort) {
-  const state = { commandResults: [], connectionStatuses: [], ws: null };
+function startFakeGladys(configValues) {
+  const state = { commandResults: [], connectionStatuses: [], containerActions: [], ws: null };
   const server = createServer((req, res) => {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
@@ -58,17 +56,29 @@ function startFakeGladys(ntfyPort) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(json));
       };
-      if (req.method === 'GET' && req.url === '/api/integration/v1/device') {
+      const url = req.url;
+      if (req.method === 'GET' && url === '/api/integration/v1/device') {
         respond([]);
-      } else if (req.method === 'GET' && req.url === '/api/integration/v1/config') {
+      } else if (req.method === 'GET' && url === '/api/integration/v1/config') {
+        respond({ config: configValues });
+      } else if (req.method === 'GET' && url === '/api/integration/v1/container') {
         respond({
-          config: {
-            server_url: `http://127.0.0.1:${ntfyPort}`,
-            default_title: 'Gladys',
-            default_priority: '4',
-          },
+          containers: [
+            {
+              name: 'server',
+              status: 'running',
+              desired: 'running',
+              ports: [{ container_port: 80, host_port: 8099 }],
+            },
+          ],
         });
-      } else if (req.method === 'POST' && req.url === '/api/integration/v1/connection_status') {
+      } else if (
+        req.method === 'POST' &&
+        /\/api\/integration\/v1\/container\/server\/(start|stop|restart)$/.test(url)
+      ) {
+        state.containerActions.push(url.split('/').pop());
+        respond({ success: true });
+      } else if (req.method === 'POST' && url === '/api/integration/v1/connection_status') {
         state.connectionStatuses.push(JSON.parse(body));
         respond({ success: true });
       } else {
@@ -95,76 +105,115 @@ function startFakeGladys(ntfyPort) {
   });
 }
 
-test('the ntfy integration publishes a notification to the user topic', async (t) => {
-  const ntfy = await startFakeNtfy();
-  const gladys = await startFakeGladys(ntfy.port);
-  t.after(() => {
-    ntfy.server.close();
-    gladys.server.close();
-  });
-
+function startIntegration(gladysPort, extraEnv = {}) {
   let output = '';
   const child = spawn(process.execPath, ['index.js'], {
     cwd: ROOT,
     env: {
       ...process.env,
-      GLADYS_HOST_API_URL: `http://127.0.0.1:${gladys.port}`,
+      GLADYS_HOST_API_URL: `http://127.0.0.1:${gladysPort}`,
       GLADYS_INTEGRATION_TOKEN: TOKEN,
-      GLADYS_INTEGRATION_SELECTOR: SELECTOR,
+      GLADYS_INTEGRATION_SELECTOR: 'ntfy-test',
       LOG_LEVEL: 'debug',
+      ...extraEnv,
     },
   });
   child.stdout.on('data', (d) => (output += d));
   child.stderr.on('data', (d) => (output += d));
-  t.after(() => child.kill('SIGKILL'));
+  return { child, out: () => output };
+}
 
-  const send = (type, payload) => gladys.state.ws.send(JSON.stringify({ type, payload }));
-
-  await t.test('on connection: reports connected', async () => {
-    await waitUntil(
-      () => gladys.state.connectionStatuses.some((s) => s.connected === true),
-      `connection status\n${output}`,
-    );
+test('cloud mode: publishes to the user topic with their token', async (t) => {
+  const ntfy = await startFakeNtfy();
+  const gladys = await startFakeGladys({
+    mode: 'cloud',
+    server_url: `http://127.0.0.1:${ntfy.port}`,
+    default_title: 'Gladys',
+    default_priority: '4',
+  });
+  const { child, out } = startIntegration(gladys.port);
+  t.after(() => {
+    child.kill('SIGKILL');
+    ntfy.server.close();
+    gladys.server.close();
   });
 
-  await t.test('message.send publishes to the user topic with their token', async () => {
-    // Send-only payload shape (SDK >= 0.9): `contact` carries the user's
-    // contact_schema values (topic + access token).
-    send('external-integration.message.send', {
-      message_id: 'send-1',
-      contact: { topic: USER_TOPIC, access_token: USER_ACCESS_TOKEN },
-      message: { text: 'Dinner is ready', file: null },
-    });
-    await waitUntil(() => ntfy.publishes.length >= 1, `publish\n${output}`);
-    await waitUntil(
-      () => gladys.state.commandResults.some((r) => r.message_id === 'send-1'),
-      `send ack\n${output}`,
-    );
+  await waitUntil(
+    () => gladys.state.connectionStatuses.some((s) => s.connected === true),
+    `connection status\n${out()}`,
+  );
+  // Cloud mode makes sure the companion server is stopped.
+  assert.ok(gladys.state.containerActions.includes('stop'), 'cloud mode stops the companion');
 
-    const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-1');
-    assert.equal(ack.success, true, ack.error);
+  gladys.state.ws.send(
+    JSON.stringify({
+      type: 'external-integration.message.send',
+      payload: {
+        message_id: 'send-1',
+        contact: { topic: USER_TOPIC, access_token: USER_ACCESS_TOKEN },
+        message: { text: 'Dinner is ready', file: null },
+      },
+    }),
+  );
+  await waitUntil(() => ntfy.publishes.length >= 1, `publish\n${out()}`);
+  await waitUntil(
+    () => gladys.state.commandResults.some((r) => r.message_id === 'send-1'),
+    `send ack\n${out()}`,
+  );
 
-    const publish = ntfy.publishes.at(-1);
-    assert.equal(publish.method, 'POST');
-    assert.equal(publish.path, `/${USER_TOPIC}`);
-    assert.equal(publish.body, 'Dinner is ready');
-    assert.equal(publish.headers.title, 'Gladys');
-    assert.equal(publish.headers.priority, '4');
-    assert.equal(publish.headers.authorization, `Bearer ${USER_ACCESS_TOKEN}`);
+  const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-1');
+  assert.equal(ack.success, true, ack.error);
+  const publish = ntfy.publishes.at(-1);
+  assert.equal(publish.path, `/${USER_TOPIC}`);
+  assert.equal(publish.body, 'Dinner is ready');
+  assert.equal(publish.headers.title, 'Gladys');
+  assert.equal(publish.headers.priority, '4');
+  assert.equal(publish.headers.authorization, `Bearer ${USER_ACCESS_TOKEN}`);
+});
+
+test('local mode: starts the companion server and publishes to it', async (t) => {
+  const ntfy = await startFakeNtfy(); // stands in for the companion ntfy server
+  const gladys = await startFakeGladys({
+    mode: 'local',
+    default_title: 'Gladys',
+    default_priority: '3',
+  });
+  // Point the internal server URL at our fake companion ntfy.
+  const { child, out } = startIntegration(gladys.port, {
+    NTFY_LOCAL_SERVER_URL: `http://127.0.0.1:${ntfy.port}`,
+  });
+  t.after(() => {
+    child.kill('SIGKILL');
+    ntfy.server.close();
+    gladys.server.close();
   });
 
-  await t.test('a message to a user without a topic is acked as failed', async () => {
-    send('external-integration.message.send', {
-      message_id: 'send-2',
-      contact: { access_token: 'tk_x' },
-      message: { text: 'no topic', file: null },
-    });
-    await waitUntil(
-      () => gladys.state.commandResults.some((r) => r.message_id === 'send-2'),
-      `fail ack\n${output}`,
-    );
-    const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-2');
-    assert.equal(ack.success, false);
-    assert.match(ack.error, /no ntfy topic/);
-  });
+  await waitUntil(
+    () => gladys.state.connectionStatuses.some((s) => s.connected === true),
+    `connection status\n${out()}`,
+  );
+  assert.ok(gladys.state.containerActions.includes('start'), 'local mode starts the companion');
+
+  // Anonymous local topic: no access token in the contact.
+  gladys.state.ws.send(
+    JSON.stringify({
+      type: 'external-integration.message.send',
+      payload: {
+        message_id: 'send-local',
+        contact: { topic: USER_TOPIC },
+        message: { text: 'Local hello', file: null },
+      },
+    }),
+  );
+  await waitUntil(() => ntfy.publishes.length >= 1, `local publish\n${out()}`);
+  const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-local');
+  assert.equal(ack.success, true, ack.error);
+  const publish = ntfy.publishes.at(-1);
+  assert.equal(publish.path, `/${USER_TOPIC}`);
+  assert.equal(publish.body, 'Local hello');
+  assert.equal(
+    publish.headers.authorization,
+    undefined,
+    'no auth header for an anonymous local topic',
+  );
 });

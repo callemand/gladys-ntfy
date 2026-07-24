@@ -11,6 +11,19 @@
 // Default public ntfy server, used when the user leaves the URL empty.
 export const DEFAULT_SERVER_URL = 'https://ntfy.sh';
 
+// Server modes (config `mode`): the public/remote cloud, or the local ntfy
+// server managed by Gladys as a companion container.
+export const SERVER_MODE = {
+  CLOUD: 'cloud',
+  LOCAL: 'local',
+};
+
+// Name of the companion ntfy container declared in the manifest. It is also its
+// DNS alias on the integration's private network, so the integration reaches it
+// at `http://server:80`. Overridable for tests via NTFY_LOCAL_SERVER_URL.
+export const LOCAL_CONTAINER_NAME = 'server';
+export const LOCAL_SERVER_URL = process.env.NTFY_LOCAL_SERVER_URL || 'http://server:80';
+
 // Default notification title, used when none is configured.
 export const DEFAULT_TITLE = 'Gladys';
 

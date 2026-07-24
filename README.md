@@ -21,23 +21,30 @@ there is no incoming path and no account linking.
   receives the resolved `contact` (that user's topic + token) and the message;
   the integration publishes it with `POST {server}/{topic}` (`Bearer` token,
   configured default title and priority).
+- **Two server modes** (config `mode`):
+  - **cloud** — publish to the public `ntfy.sh` or a URL the user sets;
+  - **local** — Gladys runs a ntfy server as a **companion container** (manifest
+    `containers`, `binwiederhier/ntfy`, `start: manual`). The integration starts
+    it on demand and publishes to it on the private network (`http://server:80`);
+    the user subscribes their phone to it on the LAN. Docker required.
 
 ## Configuration
 
 Integration-wide (`config_schema`):
 
-| Field              | Description                                         |
-| ------------------ | --------------------------------------------------- |
-| `server_url`       | ntfy server URL, shared (default `https://ntfy.sh`) |
-| `default_priority` | Priority of the sent notifications (1–5, default 3) |
-| `default_title`    | Title of the sent notifications (default `Gladys`)  |
+| Field              | Description                                           |
+| ------------------ | ----------------------------------------------------- |
+| `mode`             | `cloud` (default) or `local` (managed ntfy container) |
+| `server_url`       | Cloud-mode server URL (default `https://ntfy.sh`)     |
+| `default_priority` | Priority of the sent notifications (1–5, default 3)   |
+| `default_title`    | Title of the sent notifications (default `Gladys`)    |
 
 Per user (`contact_schema`, the "My account" block):
 
-| Field          | Description                                         |
-| -------------- | --------------------------------------------------- |
-| `topic`        | The user's ntfy topic (required)                    |
-| `access_token` | Access token (`tk_…`) allowed to publish (required) |
+| Field          | Description                                                 |
+| -------------- | ----------------------------------------------------------- |
+| `topic`        | The user's ntfy topic (required)                            |
+| `access_token` | Access token (`tk_…`); required for a protected/cloud topic |
 
 See [`docs/en.md`](docs/en.md) / [`docs/fr.md`](docs/fr.md) for the end-user
 guide.

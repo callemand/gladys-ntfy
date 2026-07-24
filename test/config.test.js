@@ -1,14 +1,44 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { normalizeConfig, normalizeContact, buildAuthHeader } from '../src/config.js';
-import { DEFAULT_SERVER_URL, DEFAULT_TITLE, DEFAULT_PRIORITY } from '../src/constants.js';
+import {
+  normalizeConfig,
+  normalizeContact,
+  buildAuthHeader,
+  isLocalMode,
+  resolveServerBaseUrl,
+} from '../src/config.js';
+import {
+  DEFAULT_SERVER_URL,
+  DEFAULT_TITLE,
+  DEFAULT_PRIORITY,
+  LOCAL_SERVER_URL,
+} from '../src/constants.js';
 
 test('normalizeConfig applies the defaults on an empty config', () => {
   const config = normalizeConfig();
+  assert.equal(config.mode, 'cloud');
   assert.equal(config.serverUrl, DEFAULT_SERVER_URL);
   assert.equal(config.defaultTitle, DEFAULT_TITLE);
   assert.equal(config.defaultPriority, DEFAULT_PRIORITY);
+});
+
+test('normalizeConfig keeps only a valid mode, defaulting to cloud', () => {
+  assert.equal(normalizeConfig({ mode: 'local' }).mode, 'local');
+  assert.equal(normalizeConfig({ mode: 'cloud' }).mode, 'cloud');
+  assert.equal(normalizeConfig({ mode: 'bogus' }).mode, 'cloud');
+  assert.equal(normalizeConfig({}).mode, 'cloud');
+});
+
+test('isLocalMode / resolveServerBaseUrl follow the mode', () => {
+  const cloud = normalizeConfig({ mode: 'cloud', server_url: 'https://ntfy.example.com' });
+  assert.equal(isLocalMode(cloud), false);
+  assert.equal(resolveServerBaseUrl(cloud), 'https://ntfy.example.com');
+
+  const local = normalizeConfig({ mode: 'local', server_url: 'https://ntfy.example.com' });
+  assert.equal(isLocalMode(local), true);
+  // Local mode ignores server_url and targets the companion container.
+  assert.equal(resolveServerBaseUrl(local), LOCAL_SERVER_URL.replace(/\/+$/, ''));
 });
 
 test('normalizeConfig trims the server URL and strips trailing slashes', () => {
