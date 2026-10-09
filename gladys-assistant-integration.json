@@ -6,11 +6,13 @@
     "en": "Send push notifications through ntfy (ntfy.sh or self-hosted).",
     "fr": "Envoyez des notifications push via ntfy (ntfy.sh ou auto-hébergé)."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/callemand/gladys-ntfy:1.0.0",
+  "version": "1.1.0",
+  "docker_image": "ghcr.io/callemand/gladys-ntfy:1.1.0",
   "gladys_version": ">=4.62.0",
   "cover_image": "https://raw.githubusercontent.com/callemand/gladys-ntfy/main/cover.png",
-  "transports": ["cloud"],
+  "transports": [
+    "cloud"
+  ],
   "messaging": {
     "receive": false
   },
@@ -46,11 +48,41 @@
       },
       "default": "3",
       "options": [
-        { "value": "1", "label": { "en": "Min", "fr": "Min" } },
-        { "value": "2", "label": { "en": "Low", "fr": "Basse" } },
-        { "value": "3", "label": { "en": "Default", "fr": "Normale" } },
-        { "value": "4", "label": { "en": "High", "fr": "Haute" } },
-        { "value": "5", "label": { "en": "Max / Urgent", "fr": "Max / Urgente" } }
+        {
+          "value": "1",
+          "label": {
+            "en": "Min",
+            "fr": "Min"
+          }
+        },
+        {
+          "value": "2",
+          "label": {
+            "en": "Low",
+            "fr": "Basse"
+          }
+        },
+        {
+          "value": "3",
+          "label": {
+            "en": "Default",
+            "fr": "Normale"
+          }
+        },
+        {
+          "value": "4",
+          "label": {
+            "en": "High",
+            "fr": "Haute"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "Max / Urgent",
+            "fr": "Max / Urgente"
+          }
+        }
       ],
       "required": false
     },
