@@ -52,6 +52,11 @@ Use a Gladys scene with a **"Send a message"** action, choose this integration
 and the user to notify: the message is published to that user's ntfy topic and
 pushed to their phone.
 
+The **"Send a camera image"** action works too: the image comes as an
+attachment of the notification, shown in the ntfy app. If the ntfy server does
+not accept attachments (disabled on some self-hosted servers, or an image too
+large), the text is still sent, without the image.
+
 ## Troubleshooting
 
 - **A user gets no notification** — check that their **topic** and **access

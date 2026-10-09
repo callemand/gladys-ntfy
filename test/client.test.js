@@ -90,3 +90,64 @@ test('publish throws with the HTTP status on a non-2xx response', async (t) => {
     },
   );
 });
+
+test('publish PUTs an attachment, the message going in the query string', async (t) => {
+  const requests = [];
+  const { server, url } = await startServer((req, res) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      requests.push({
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body: Buffer.concat(chunks),
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ id: 'att-1' }));
+    });
+  });
+  t.after(() => server.close());
+
+  const image = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x10]);
+  const id = await publish(
+    { serverUrl: url, topic: 'cam', accessToken: 'tk_test' },
+    {
+      text: 'Alerte évènement\nCuisine',
+      title: 'Gladys',
+      priority: 5,
+      attachment: { data: image, contentType: 'image/jpeg', filename: 'gladys.jpg' },
+    },
+  );
+
+  assert.equal(id, 'att-1');
+  const [req] = requests;
+  assert.equal(req.method, 'PUT');
+  const target = new URL(req.url, url);
+  assert.equal(target.pathname, '/cam');
+  assert.equal(target.searchParams.get('message'), 'Alerte évènement\nCuisine');
+  assert.equal(req.headers.filename, 'gladys.jpg');
+  assert.equal(req.headers['content-type'], 'image/jpeg');
+  assert.equal(req.headers.priority, '5');
+  assert.deepEqual(req.body, image);
+});
+
+test('publish sends an attachment with no message when the text is blank', async (t) => {
+  let target = null;
+  const { server, url } = await startServer((req, res) => {
+    target = req.url;
+    req.resume();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ id: 'x' }));
+  });
+  t.after(() => server.close());
+
+  await publish(
+    { serverUrl: url, topic: 'cam' },
+    {
+      text: ' ',
+      attachment: { data: Buffer.from('i'), contentType: 'image/png', filename: 'gladys.png' },
+    },
+  );
+  assert.equal(target, '/cam');
+});

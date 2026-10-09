@@ -3,6 +3,9 @@
 //
 // ntfy publishing is a single HTTP call:
 //   POST {server}/{topic}   body = message, headers = Title, Priority, Tags...
+// With an attached image, the image is the body instead (PUT, `Filename`
+// header) and the message moves to the `message` query parameter, which keeps
+// UTF-8 and line breaks a header could not carry.
 // The server/topic/token are per-user (they come from the `contact` of each
 // outgoing message), so `publish()` takes them per call rather than storing
 // them on the instance.
@@ -22,14 +25,22 @@ import { buildAuthHeader } from '../config.js';
  * @param {string} [message.title] notification title
  * @param {number} [message.priority] ntfy priority (1-5)
  * @param {string[]} [message.tags] ntfy tags
+ * @param {{ data: Buffer, contentType: string, filename: string }} [message.attachment]
+ *   an image to attach
  * @returns {Promise<string|null>} the published message id (or null)
  */
-export async function publish({ serverUrl, topic, accessToken }, { text, title, priority, tags }) {
+export async function publish(
+  { serverUrl, topic, accessToken },
+  { text, title, priority, tags, attachment },
+) {
   const authHeader = buildAuthHeader(accessToken);
   const headers = {
-    'Content-Type': 'text/plain; charset=utf-8',
+    'Content-Type': attachment ? attachment.contentType : 'text/plain; charset=utf-8',
     ...(authHeader ? { Authorization: authHeader } : {}),
   };
+  if (attachment) {
+    headers.Filename = attachment.filename;
+  }
   if (title) {
     headers.Title = encodeHeaderValue(title);
   }
@@ -40,10 +51,14 @@ export async function publish({ serverUrl, topic, accessToken }, { text, title, 
     headers.Tags = tags.join(',');
   }
   const base = serverUrl.replace(/\/+$/, '');
-  const response = await fetch(`${base}/${encodeURIComponent(topic)}`, {
-    method: 'POST',
+  let url = `${base}/${encodeURIComponent(topic)}`;
+  if (attachment && text && text.trim()) {
+    url += `?${new URLSearchParams({ message: text })}`;
+  }
+  const response = await fetch(url, {
+    method: attachment ? 'PUT' : 'POST',
     headers,
-    body: text,
+    body: attachment ? attachment.data : text,
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {

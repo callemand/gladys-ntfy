@@ -36,7 +36,19 @@ gladys.onSendMessage(async (contact, message) => {
     throw new Error('This Gladys user has no ntfy topic configured in their account');
   }
   const payload = buildOutgoingPayload(message, config);
-  await publish({ serverUrl: config.serverUrl, topic, accessToken }, payload);
+  const target = { serverUrl: config.serverUrl, topic, accessToken };
+  try {
+    await publish(target, payload);
+  } catch (err) {
+    // A server can refuse attachments (disabled on a self-hosted one: 400) or
+    // this one (too large: 413). The text still gets through, without it.
+    if (!payload.attachment || ![400, 413].includes(err.status)) {
+      throw err;
+    }
+    logger.warn(`ntfy refused the image (${err.message}): sending the text alone`);
+    const { attachment: _refused, ...textOnly } = payload;
+    await publish(target, textOnly);
+  }
   logger.debug(`Notification published to ntfy topic "${topic}"`);
 });
 
