@@ -29,23 +29,43 @@ async function waitUntil(predicate, what, timeoutMs = 10000) {
 // --- Fake ntfy server (publish only) -----------------------------------------
 function startFakeNtfy() {
   const publishes = [];
+  // `refuseAttachments`: answer like a server with attachments disabled
+  const options = { refuseAttachments: false };
   let counter = 0;
   const server = createServer((req, res) => {
-    let body = '';
-    req.on('data', (c) => (body += c));
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
     req.on('end', () => {
+      const raw = Buffer.concat(chunks);
       const id = `pub-${counter++}`;
-      publishes.push({ method: req.method, path: req.url, headers: req.headers, body, id });
+      publishes.push({
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+        body: raw.toString(),
+        raw,
+        id,
+      });
+      if (options.refuseAttachments && req.headers.filename) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end('{"code":40014,"http":400,"error":"invalid request: attachments not allowed"}');
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ id, event: 'message', message: body }));
+      res.end(JSON.stringify({ id, event: 'message' }));
     });
   });
   return new Promise((resolve) => {
     server.listen(0, '127.0.0.1', () =>
-      resolve({ server, publishes, port: server.address().port }),
+      resolve({ server, publishes, options, port: server.address().port }),
     );
   });
 }
+
+// A tiny real PNG (1x1), in the format Gladys hands camera images over.
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+const GLADYS_IMAGE = `image/png;base64,${PNG_BASE64}`;
 
 // --- Fake Gladys host (REST + WebSocket) -------------------------------------
 function startFakeGladys(ntfyPort) {
@@ -166,5 +186,58 @@ test('the ntfy integration publishes a notification to the user topic', async (t
     const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-2');
     assert.equal(ack.success, false);
     assert.match(ack.error, /no ntfy topic/);
+  });
+
+  await t.test('an image is published as an attachment, with the text', async () => {
+    const before = ntfy.publishes.length;
+    send('external-integration.message.send', {
+      message_id: 'send-image',
+      contact: { topic: USER_TOPIC, access_token: USER_ACCESS_TOKEN },
+      message: { text: 'Mouvement détecté\nEntrée', file: GLADYS_IMAGE },
+    });
+    await waitUntil(
+      () => gladys.state.commandResults.some((r) => r.message_id === 'send-image'),
+      `image ack\n${output}`,
+    );
+    const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-image');
+    assert.equal(ack.success, true, ack.error);
+
+    const published = ntfy.publishes.slice(before);
+    assert.equal(published.length, 1);
+    const [publish] = published;
+    assert.equal(publish.method, 'PUT');
+    const url = new URL(publish.path, 'http://ntfy');
+    assert.equal(url.pathname, `/${USER_TOPIC}`);
+    assert.equal(url.searchParams.get('message'), 'Mouvement détecté\nEntrée');
+    assert.equal(publish.headers.filename, 'gladys.png');
+    assert.equal(publish.headers['content-type'], 'image/png');
+    assert.equal(publish.headers.title, 'Gladys');
+    assert.equal(publish.headers.authorization, `Bearer ${USER_ACCESS_TOKEN}`);
+    assert.deepEqual(publish.raw, Buffer.from(PNG_BASE64, 'base64'), 'the image bytes');
+  });
+
+  await t.test('a server that refuses attachments still gets the text', async () => {
+    ntfy.options.refuseAttachments = true;
+    const before = ntfy.publishes.length;
+    send('external-integration.message.send', {
+      message_id: 'send-refused',
+      contact: { topic: USER_TOPIC, access_token: USER_ACCESS_TOKEN },
+      message: { text: 'Porte ouverte', file: GLADYS_IMAGE },
+    });
+    await waitUntil(
+      () => gladys.state.commandResults.some((r) => r.message_id === 'send-refused'),
+      `refused ack\n${output}`,
+    );
+    ntfy.options.refuseAttachments = false;
+    const ack = gladys.state.commandResults.find((r) => r.message_id === 'send-refused');
+    assert.equal(ack.success, true, ack.error);
+    const published = ntfy.publishes.slice(before);
+    assert.deepEqual(
+      published.map((p) => p.method),
+      ['PUT', 'POST'],
+      'the image first, then the text alone',
+    );
+    assert.equal(published[1].body, 'Porte ouverte');
+    assert.equal(published[1].headers.filename, undefined);
   });
 });

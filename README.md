@@ -21,6 +21,12 @@ there is no incoming path and no account linking.
   receives the resolved `contact` (that user's topic + token) and the message;
   the integration publishes it with `POST {server}/{topic}` (`Bearer` token,
   configured default title and priority).
+- **Images** — a message with an image (`message.file`, e.g. the "send a camera
+  image" scene action, `image/jpg;base64,…`) is published as an ntfy
+  **attachment**: `PUT {server}/{topic}` with the image as body, a `Filename`
+  header, and the text in the `message` query parameter (UTF-8 and line breaks
+  survive, which a header would not allow). A server that refuses it (400:
+  attachments disabled, 413: too large) gets the text alone instead.
 
 ## Configuration
 

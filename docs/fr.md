@@ -55,6 +55,12 @@ Utilisez une scène Gladys avec une action **« Envoyer un message »**,
 choisissez cette intégration et l'utilisateur à notifier : le message est publié
 sur le topic ntfy de cet utilisateur et poussé sur son téléphone.
 
+L'action **« Envoyer l'image d'une caméra »** fonctionne aussi : l'image arrive
+en pièce jointe de la notification, affichée dans l'application ntfy. Si le
+serveur ntfy n'accepte pas les pièces jointes (désactivées sur certains serveurs
+auto-hébergés, ou image trop lourde), le texte est tout de même envoyé, sans
+l'image.
+
 ## Dépannage
 
 - **Un utilisateur ne reçoit rien** — vérifiez que son **topic** et son **jeton
