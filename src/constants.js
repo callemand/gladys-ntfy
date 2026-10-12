@@ -30,3 +30,9 @@ export const MAX_MESSAGE_TEXT_LENGTH = 4096;
 
 // HTTP timeout for the publish requests (ms).
 export const REQUEST_TIMEOUT_MS = 15000;
+
+// A topic name ntfy accepts: letters, digits, - and _, at most 64 characters.
+export const TOPIC_PATTERN = /^[-_A-Za-z0-9]{1,64}$/;
+
+// Prefix of every ntfy access token.
+export const ACCESS_TOKEN_PREFIX = 'tk_';

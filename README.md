@@ -19,8 +19,14 @@ there is no incoming path and no account linking.
   **access token** in the "My account" block (manifest `contact_schema`).
 - **Sending** — when Gladys delivers a notification to a user, `onSendMessage`
   receives the resolved `contact` (that user's topic + token) and the message;
-  the integration publishes it with `POST {server}/{topic}` (`Bearer` token,
-  configured default title and priority).
+  the integration publishes it with `POST {server}/{topic}` (`Bearer` token
+  when one is set, configured default priority, and the title in the `title`
+  query parameter so it keeps its accents).
+- **Clear errors** — the server is checked (`GET {server}/v1/health`) at
+  startup and on every config change; an unreachable server or a refused
+  notification (401, 403, 429…) is explained in the logs and in the connection
+  status of the Configuration screen, naming the setting to fix. A topic ntfy
+  would reject is caught before sending.
 - **Images** — a message with an image (`message.file`, e.g. the "send a camera
   image" scene action, `image/jpg;base64,…`) is published as an ntfy
   **attachment**: `PUT {server}/{topic}` with the image as body, a `Filename`
@@ -43,7 +49,7 @@ Per user (`contact_schema`, the "My account" block):
 | Field          | Description                                         |
 | -------------- | --------------------------------------------------- |
 | `topic`        | The user's ntfy topic (required)                    |
-| `access_token` | Access token (`tk_…`) allowed to publish (required) |
+| `access_token` | Access token (`tk_…`) allowed to publish (optional) |
 
 See [`docs/en.md`](docs/en.md) / [`docs/fr.md`](docs/fr.md) for the end-user
 guide.
@@ -56,7 +62,8 @@ gladys-assistant-integration.json # manifest (communication, messaging.receive:f
 src/
   constants.js                    # ntfy protocol constants + defaults
   config.js                       # normalizeConfig / normalizeContact / buildAuthHeader
-  ntfy/client.js                  # publish() — one POST per notification
+  ntfy/client.js                  # publish() — one POST per notification; checkServer()
+  ntfy/errors.js                  # describeError(): failure -> actionable en/fr message
   messaging/messageRouter.js      # pure mapping: OutgoingMessage -> ntfy payload
 test/                             # node:test unit tests + a full e2e (real index.js vs fake Gladys + fake ntfy)
 docs/{en.md, fr.md}
