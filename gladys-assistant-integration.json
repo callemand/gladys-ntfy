@@ -129,14 +129,14 @@
         "fr": "Jeton d'accès"
       },
       "description": {
-        "en": "ntfy access token (starts with tk_) allowed to publish to your protected topic.",
-        "fr": "Jeton d'accès ntfy (commence par tk_) autorisé à publier sur votre topic protégé."
+        "en": "ntfy access token (starts with tk_) allowed to publish to your topic. Leave empty for a topic open to anyone, such as a public topic on ntfy.sh or a server without authentication.",
+        "fr": "Jeton d'accès ntfy (commence par tk_) autorisé à publier sur votre topic. Laissez vide pour un topic ouvert à tous, comme un topic public sur ntfy.sh ou un serveur sans authentification."
       },
       "placeholder": {
         "en": "tk_xxxxxxxxxxxxxxxx",
         "fr": "tk_xxxxxxxxxxxxxxxx"
       },
-      "required": true
+      "required": false
     }
   ]
 }

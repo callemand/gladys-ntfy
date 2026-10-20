@@ -20,9 +20,11 @@ their account, so everyone gets their notifications on their own phone.
   [iOS](https://apps.apple.com/us/app/ntfy/id1625396347)), or any ntfy client.
 - Internet access from your Gladys instance (to reach https://ntfy.sh), or a
   reachable self-hosted ntfy server.
-- A **topic** and an **access token** for it. A topic is a channel; pick a
-  **long, hard-to-guess** name and protect it with a token (`tk_…`) allowed to
-  publish to it.
+- A **topic**. A topic is a channel: pick a **long, hard-to-guess** name, with
+  only letters, digits, `-` and `_`.
+- An **access token** (`tk_…`) allowed to publish to that topic, if your server
+  or topic is protected. It is optional for a topic open to anyone, such as a
+  public topic on ntfy.sh.
 
 ## Configuration
 
@@ -40,8 +42,8 @@ The configuration has two parts:
 Each Gladys user opens the integration and fills their own account block:
 
 - **Your ntfy topic** — the topic your notifications are sent to;
-- **Access token** — an ntfy access token (`tk_…`) allowed to publish to that
-  topic.
+- **Access token** (optional) — an ntfy access token (`tk_…`) allowed to
+  publish to that topic. Leave it empty if the topic is open to anyone.
 
 Then **subscribe to that topic in the ntfy app** on your phone so the
 notifications reach you.
@@ -59,10 +61,24 @@ large), the text is still sent, without the image.
 
 ## Troubleshooting
 
-- **A user gets no notification** — check that their **topic** and **access
-  token** are filled in their account block, and that the ntfy app on their
-  phone is subscribed to the **same topic and server**.
-- **Publishing fails (403)** — the access token is missing or not allowed to
-  publish to the topic; create/renew it on your ntfy server.
+The integration checks that the ntfy server answers at startup and on every
+settings change. When it does not, or when a notification is refused, the
+Configuration screen shows it with the reason and what to fix. The status goes
+back to normal as soon as a notification gets through. The same message is
+written in the **Logs** tab of the integration.
+
+- **Unable to reach the ntfy server** — the server URL is wrong, or Gladys
+  cannot reach the network or the server.
+- **Access token refused (401)** — the token is invalid, expired or deleted. An
+  ntfy token starts with `tk_`.
+- **Not allowed to publish (403)** — the topic requires a token, or the token
+  cannot write to this topic; fix its permissions on your ntfy server.
+- **Invalid topic** — a topic only accepts letters, digits, `-` and `_` (64
+  characters at most), with no spaces or accents.
+- **Limit reached (429)** — the server limits the number of notifications;
+  wait, or use your own server.
+- **A user gets no notification, with no error** — check that the ntfy app on
+  their phone is subscribed to the **same topic and server** as their "My
+  account" block.
 - **Notifications arrive without a title** — set the **Default notification
   title** in the integration settings.

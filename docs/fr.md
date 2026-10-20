@@ -22,9 +22,11 @@ son propre téléphone.
   [iOS](https://apps.apple.com/us/app/ntfy/id1625396347)), ou tout client ntfy.
 - Un accès Internet depuis votre instance Gladys (pour joindre https://ntfy.sh),
   ou un serveur ntfy auto-hébergé joignable.
-- Un **topic** et un **jeton d'accès** pour ce topic. Un topic est un canal :
-  choisissez un nom **long et difficile à deviner** et protégez-le avec un jeton
-  (`tk_…`) autorisé à y publier.
+- Un **topic**. Un topic est un canal : choisissez un nom **long et difficile à
+  deviner**, avec uniquement des lettres, des chiffres, `-` et `_`.
+- Un **jeton d'accès** (`tk_…`) autorisé à publier sur ce topic, si votre
+  serveur ou votre topic est protégé. Il est facultatif pour un topic ouvert à
+  tous, comme un topic public sur ntfy.sh.
 
 ## Configuration
 
@@ -43,8 +45,8 @@ Chaque utilisateur Gladys ouvre l'intégration et remplit son bloc « Mon
 compte » :
 
 - **Votre topic ntfy** — le topic sur lequel vos notifications sont envoyées ;
-- **Jeton d'accès** — un jeton d'accès ntfy (`tk_…`) autorisé à publier sur ce
-  topic.
+- **Jeton d'accès** (facultatif) — un jeton d'accès ntfy (`tk_…`) autorisé à
+  publier sur ce topic. Laissez vide si le topic est ouvert à tous.
 
 Puis **abonnez-vous à ce topic dans l'application ntfy** sur votre téléphone
 pour recevoir les notifications.
@@ -63,10 +65,25 @@ l'image.
 
 ## Dépannage
 
-- **Un utilisateur ne reçoit rien** — vérifiez que son **topic** et son **jeton
-  d'accès** sont renseignés dans son bloc « Mon compte », et que l'application
-  ntfy de son téléphone est abonnée au **même topic et au même serveur**.
-- **La publication échoue (403)** — le jeton d'accès est absent ou non autorisé
-  à publier sur le topic ; créez-le ou renouvelez-le sur votre serveur ntfy.
+L'intégration vérifie au démarrage, et à chaque changement de réglages, que le
+serveur ntfy répond. Si ce n'est pas le cas, ou si une notification est
+refusée, l'écran de configuration l'affiche avec la raison et ce qu'il faut
+corriger. Le statut redevient normal dès qu'une notification passe. Le même
+message apparaît dans l'onglet **Journaux** de l'intégration.
+
+- **Impossible de joindre le serveur ntfy** — l'URL du serveur est fausse, ou
+  Gladys n'a pas accès au réseau ou au serveur.
+- **Jeton refusé (401)** — le jeton est invalide, expiré ou supprimé. Un jeton
+  ntfy commence par `tk_`.
+- **Pas le droit de publier (403)** — le topic demande un jeton, ou le jeton
+  n'a pas le droit d'écrire sur ce topic ; corrigez ses droits sur votre
+  serveur ntfy.
+- **Topic non valide** — un topic n'accepte que des lettres, des chiffres, `-`
+  et `_` (64 caractères maximum), sans espaces ni accents.
+- **Limite atteinte (429)** — le serveur limite le nombre de notifications ;
+  patientez, ou utilisez votre propre serveur.
+- **Un utilisateur ne reçoit rien, sans erreur** — vérifiez que l'application
+  ntfy de son téléphone est abonnée au **même topic et au même serveur** que
+  son bloc « Mon compte ».
 - **Les notifications arrivent sans titre** — renseignez le **Titre par défaut**
   dans les réglages de l'intégration.
